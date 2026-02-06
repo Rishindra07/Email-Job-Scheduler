@@ -48,7 +48,7 @@ export const Compose = () => {
                 delay: 0,
             };
 
-            const res = await api.post('/schedule-email', payload);
+             await api.post('/schedule-email', payload);
 
             toast.success('Email scheduled successfully!');
             navigate('/scheduled');
