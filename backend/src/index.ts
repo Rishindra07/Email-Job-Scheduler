@@ -17,20 +17,26 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(helmet({
-    contentSecurityPolicy: false, // Disable for now to ensure frontend works when served
+    contentSecurityPolicy: false,
 }));
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from frontend/dist
-const frontendPath = path.join(__dirname, '../../frontend/dist');
-app.use(express.static(frontendPath));
-
+// API Routes should come BEFORE static files
 app.use('/api', apiRoutes);
 
+// Serve static files from frontend/dist
+const frontendPath = path.join(__dirname, '../../frontend/dist');
+console.log('📂 Frontend static path:', frontendPath);
+
+app.use(express.static(frontendPath));
+
 // Catch-all to serve frontend index.html for client-side routing
-app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) return next();
+app.get('*', (req, res) => {
+    // If it's an API request that reached here, it's a 404
+    if (req.path.startsWith('/api')) {
+        return res.status(404).json({ error: 'API route not found' });
+    }
     res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
@@ -60,7 +66,7 @@ const startServer = async () => {
 
         app.listen(PORT, () => {
             console.log(`\n✓ Server running on port ${PORT}`);
-            console.log(`API: http://localhost:${PORT}/api`);
+            console.log(`API check: http://localhost:${PORT}/api/health`);
             if (!redisAvailable) {
                 console.log('⚠️  Running without Redis - scheduled emails will not auto-process');
                 console.log('   Install Redis 5.0+ to enable email job queue\n');
