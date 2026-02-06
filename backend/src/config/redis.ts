@@ -24,25 +24,38 @@ const redisConfig = redisUrl ? redisUrl : {
 
 const initializeRedis = async () => {
     try {
-        const options = {
+        const isUpstash = redisUrl?.includes('upstash.io');
+
+        const options: any = {
             maxRetriesPerRequest: null,
             enableReadyCheck: false,
             enableOfflineQueue: false,
-            tls: redisUrl?.startsWith('rediss://') ? {} : undefined
+            tls: (redisUrl?.startsWith('rediss://') || isUpstash) ? {} : undefined,
+            connectTimeout: 10000,
         };
+
+        console.log('🔄 Attempting to connect to Redis...');
+        if (redisUrl) {
+            const maskedUrl = redisUrl.replace(/:[^:@]+@/, ':****@');
+            console.log(`📡 URL: ${maskedUrl}`);
+        }
 
         redisConnection = typeof redisConfig === 'string'
             ? new Redis(redisConfig, options)
-            : new Redis(redisConfig);
+            : new Redis(redisConfig as any);
 
         redisConnection.on('error', (err) => {
             redisAvailable = false;
-            console.warn('⚠️  Redis connection error - Job queue disabled:', err.message);
+            console.warn('⚠️  Redis connection error:', err.message);
         });
 
         redisConnection.on('connect', () => {
             redisAvailable = true;
             console.log('✓ Connected to Redis');
+        });
+
+        redisConnection.on('ready', () => {
+            console.log('✓ Redis is ready');
         });
 
         redisConnection.on('close', () => {
@@ -52,17 +65,19 @@ const initializeRedis = async () => {
 
         return new Promise((resolve) => {
             const timeout = setTimeout(() => {
-                redisAvailable = false;
-                console.warn('⚠️  Redis connection timeout - proceeding without job queue');
-                resolve(false);
-            }, 5000);
+                if (!redisAvailable) {
+                    console.warn('⚠️  Redis connection timeout - proceeding without job queue');
+                    resolve(false);
+                }
+            }, 10000);
 
             redisConnection?.ping().then(() => {
                 clearTimeout(timeout);
                 redisAvailable = true;
                 resolve(true);
-            }).catch(() => {
+            }).catch((err) => {
                 clearTimeout(timeout);
+                console.warn('⚠️  Redis ping failed:', err.message);
                 redisAvailable = false;
                 resolve(false);
             });
