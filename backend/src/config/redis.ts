@@ -1,0 +1,67 @@
+import { Redis } from 'ioredis';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+let redisConnection: Redis | null = null;
+let redisAvailable = false;
+
+const redisConfig = {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+    maxRetriesPerRequest: null,
+    retryStrategy: (times: number) => {
+        if (times > 5) {
+            return null;
+        }
+        return Math.min(times * 50, 2000);
+    },
+    enableReadyCheck: false,
+    enableOfflineQueue: false,
+};
+
+const initializeRedis = async () => {
+    try {
+        redisConnection = new Redis(redisConfig);
+
+        redisConnection.on('error', (err) => {
+            redisAvailable = false;
+            console.warn('⚠️  Redis connection error - Job queue disabled:', err.message);
+        });
+
+        redisConnection.on('connect', () => {
+            redisAvailable = true;
+            console.log('✓ Connected to Redis');
+        });
+
+        redisConnection.on('close', () => {
+            redisAvailable = false;
+            console.warn('⚠️  Redis connection closed');
+        });
+
+        return new Promise((resolve) => {
+            const timeout = setTimeout(() => {
+                redisAvailable = false;
+                console.warn('⚠️  Redis connection timeout - proceeding without job queue');
+                resolve(false);
+            }, 5000);
+
+            redisConnection?.ping().then(() => {
+                clearTimeout(timeout);
+                redisAvailable = true;
+                resolve(true);
+            }).catch(() => {
+                clearTimeout(timeout);
+                redisAvailable = false;
+                resolve(false);
+            });
+        });
+    } catch (error: any) {
+        console.warn('⚠️  Failed to initialize Redis:', error.message);
+        redisAvailable = false;
+        return false;
+    }
+};
+
+export { initializeRedis, redisAvailable };
+export const getRedisConnection = () => redisConnection;
