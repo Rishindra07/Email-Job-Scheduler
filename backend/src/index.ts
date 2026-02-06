@@ -7,7 +7,7 @@ import { initializeEmailQueue } from './jobs/emailQueue';
 import { initializeEmailWorker } from './jobs/emailWorker';
 import { startPollingPendingEmails } from './jobs/pollWorker';
 import apiRoutes from './routes/api';
-import path from 'path';
+import { Request, Response } from 'express';
 
 // Load env vars
 dotenv.config();
@@ -16,37 +16,24 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(helmet({
-    contentSecurityPolicy: false,
-}));
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
-// API Routes should come BEFORE static files
 app.use('/api', apiRoutes);
 
-// Serve static files from frontend/dist
-const frontendPath = path.join(__dirname, '../../frontend/dist');
-console.log('📂 Frontend static path:', frontendPath);
-
-app.use(express.static(frontendPath));
-
-// Catch-all to serve frontend index.html for client-side routing
-app.get('(.*)', (req, res) => {
-    // If it's an API request that reached here, it's a 404
-    if (req.path.startsWith('/api')) {
-        return res.status(404).json({ error: 'API route not found' });
-    }
-    res.sendFile(path.join(frontendPath, 'index.html'));
-});
-
 // Basic health check
-app.get('/health', (req, res) => {
+app.get('/health', (req: Request, res: Response) => {
     res.json({
         status: 'ok',
         timestamp: new Date(),
         redis: redisAvailable ? 'connected' : 'unavailable'
     });
+});
+
+// Root route
+app.get('/', (req: Request, res: Response) => {
+    res.json({ message: 'Email Job Scheduler API is running' });
 });
 
 // Start server
