@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node backend/dist/index.js",
-    "build": "npx prisma generate --schema=backend/prisma/schema.prisma && npx prisma db push --schema=backend/prisma/schema.prisma --accept-data-loss && tsc -p backend && cd frontend && npm install && npm run build",
+    "build": "echo \"🏗️ Starting Full Build...\" && npx prisma generate --schema=backend/prisma/schema.prisma && npx prisma db push --schema=backend/prisma/schema.prisma --accept-data-loss && echo \"⚙️ Compiling Backend...\" && tsc -p backend && echo \"🎨 Building Frontend...\" && cd frontend && npm install && npx rimraf dist && npm run build && echo \"✅ Build Complete!\"",
     "postinstall": "npx prisma generate --schema=backend/prisma/schema.prisma",
     "dev": "nodemon backend/src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
