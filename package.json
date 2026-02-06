@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "ts-node backend/src/index.ts",
+    "start": "node backend/dist/index.js",
+    "build": "npx prisma generate --schema=backend/prisma/schema.prisma && tsc -p backend",
     "dev": "nodemon backend/src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
