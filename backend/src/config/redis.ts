@@ -6,7 +6,9 @@ dotenv.config();
 let redisConnection: Redis | null = null;
 let redisAvailable = false;
 
-const redisConfig = {
+const redisUrl = process.env.REDIS_URL;
+
+const redisConfig = redisUrl ? redisUrl : {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379'),
     maxRetriesPerRequest: null,
@@ -22,7 +24,16 @@ const redisConfig = {
 
 const initializeRedis = async () => {
     try {
-        redisConnection = new Redis(redisConfig);
+        const options = {
+            maxRetriesPerRequest: null,
+            enableReadyCheck: false,
+            enableOfflineQueue: false,
+            tls: redisUrl?.startsWith('rediss://') ? {} : undefined
+        };
+
+        redisConnection = typeof redisConfig === 'string'
+            ? new Redis(redisConfig, options)
+            : new Redis(redisConfig);
 
         redisConnection.on('error', (err) => {
             redisAvailable = false;
