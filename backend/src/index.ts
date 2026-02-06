@@ -32,7 +32,7 @@ console.log('📂 Frontend static path:', frontendPath);
 app.use(express.static(frontendPath));
 
 // Catch-all to serve frontend index.html for client-side routing
-app.get('*', (req, res) => {
+app.get('(.*)', (req, res) => {
     // If it's an API request that reached here, it's a 404
     if (req.path.startsWith('/api')) {
         return res.status(404).json({ error: 'API route not found' });
