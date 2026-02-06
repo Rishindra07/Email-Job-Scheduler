@@ -4,9 +4,6 @@ export const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || '/api',
 });
 
-console.log('🚀 API BaseURL:', api.defaults.baseURL);
-console.log('📅 Build Time:', new Date().toISOString());
-
 // Add interceptor for auth token if needed
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');

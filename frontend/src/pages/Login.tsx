@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Lock } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export const Login = () => {
     const navigate = useNavigate();
@@ -21,10 +22,11 @@ export const Login = () => {
             const { user, token } = res.data;
             localStorage.setItem('user', JSON.stringify(user));
             localStorage.setItem('token', token);
+            toast.success(isSignup ? 'Signup successful!' : 'Login successful!');
             navigate('/');
         } catch (err: any) {
             console.error('Auth error', err?.response?.data || err);
-            alert(err?.response?.data?.error || 'Auth failed');
+            toast.error(err?.response?.data?.error || 'Auth failed');
         }
     };
 
