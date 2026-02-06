@@ -1,72 +1,126 @@
-# ReachInbox Email Job Scheduler
+# Email Job Scheduler (Monorepo)
 
-A production-grade email scheduler service with a React dashboard, built with Express, BullMQ, Redis, and Ethereal Email.
+A production-grade, full-stack email job scheduler service built with TypeScript, Express, BullMQ, Redis, and React.
 
-## Features
+## 📁 Repository Structure
 
-- **Backend**: Express + TypeScript
-- **Queue**: BullMQ (Redis-backed) for reliable scheduling
-- **Database**: PostgreSQL (Prisma ORM)
-- **Email**: Ethereal (Mock SMTP)
-- **Frontend**: React + Vite + Tailwind CSS
-- **Auth**: Google OAuth Integration
-- **Persistency**: Jobs survive server restarts
-- **Rate Limiting**: Configurable hourly limits
-
-## Prerequisites
-
-- Node.js (v18+)
-- PostgreSQL (Running locally or remote)
-- Redis (Running locally or remote)
-
-## API Keys Configuration
-
-Create a `.env` file in `backend/` and populate it (see `backend/.env.example` or below):
-
-```bash
-PORT=3000
-DATABASE_URL="postgresql://user:password@localhost:5432/email_scheduler?schema=public"
-REDIS_HOST="localhost"
-REDIS_PORT=6379
-MAX_EMAILS_PER_HOUR=100
-# Ethereal credentials will be auto-generated on first run if empty
-ETHEREAL_EMAIL=""
-ETHEREAL_PASS=""
+```text
+.
+├── backend/                # Express & Node.js Backend
+│   ├── src/
+│   │   ├── config/         # DB and Redis configurations
+│   │   ├── controllers/    # API Request handlers
+│   │   ├── jobs/           # BullMQ Workers and DB Polling Worker
+│   │   ├── routes/         # API Route definitions
+│   │   ├── services/       # Email & Core business logic
+│   │   └── index.ts        # Entry point
+│   ├── prisma/             # DB schema and migrations
+│   └── tsconfig.json       # Backend TS config
+├── frontend/               # Vite & React Frontend
+│   ├── src/
+│   │   ├── components/     # Shared UI components (Layout, Table)
+│   │   ├── context/        # Auth context
+│   │   ├── pages/          # Application views (Dashboard, Compose)
+│   │   └── lib/            # API client (Axios)
+│   ├── tailwind.config.js  # Styling configuration
+│   └── package.json        # Frontend dependencies
+├── .env                    # Environment variables (Shared/Backend)
+├── .gitignore              # Git exclusion rules
+└── package.json            # Root configuration
 ```
 
-## Setup & Run
+## 🚀 Getting Started
 
-### 1. Backend
+### Prerequisites
+- **Node.js**: v18+ 
+- **Redis**: Required for BullMQ (falling back to DB polling if unavailable)
+- **SQLite**: Used by default (dev.db)
 
+### 1. Backend Setup
 ```bash
 cd backend
 npm install
 npx prisma generate
-npx prisma db push  # Create tables in DB
-npm run dev
+npx prisma migrate dev
 ```
 
-The server will start on `http://localhost:3000`.
-
-### 2. Frontend
-
+### 2. Frontend Setup
 ```bash
 cd frontend
 npm install
-npm run dev
 ```
 
-The dashboard will open at `http://localhost:5173`.
+### 3. Environment Variables
+Create a `.env` in the root (or `backend/`) with:
+```env
+PORT=3000
+DATABASE_URL="file:./dev.db"
+REDIS_HOST="localhost"
+REDIS_PORT=6379
 
-## Architecture Overview
+# SMTP Configuration (GMAIL / ETHEREAL)
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT=587
+SMTP_USER="your-email@gmail.com"
+SMTP_PASS="your-app-password"
+SMTP_SECURE=false
+SMTP_FROM_NAME="ReachInbox Scheduler"
 
-1. **Scheduling**: When a user schedules an email, it is saved to the Postgres DB as `PENDING` and added to a BullMQ delayed queue.
-2. **Execution**: The BullMQ worker picks up the job at the right time.
-3. **Throttling**: The worker utilizes `limiter` settings to enforce `MAX_EMAILS_PER_HOUR` and simulated delays between sends.
-4. **Persistence**: Since BullMQ relies on Redis, and job state is in Postgres, the system is robust against restarts.
+# JWT Secret
+JWT_SECRET="supersecretkey"
+```
 
-## Dashboard
+### 4. Running the App
+- **Backend**: `npm run dev` in `backend/` folder.
+- **Frontend**: `npm run dev` in `frontend/` folder.
 
-- **Login**: Authenticate via Google.
-- **Compose**: Schedule emails with subject, body, and time.
-- **Lists**: View scheduled and sent email history.
+---
+
+## 📧 Email Configuration (Ethereal)
+If you do not want to use real SMTP, you can use **Ethereal**.
+1. Set `SMTP_HOST` to `smtp.ethereal.email`.
+2. Generate credentials at [ethereal.email](https://ethereal.email).
+3. Update `SMTP_USER` and `SMTP_PASS` in `.env`.
+
+---
+
+## 🏗️ Architecture Overview
+
+### How Scheduling Works
+Jobs are pushed into a **BullMQ** queue with a `delay` parameter (calculated as `scheduledAt - now`). If Redis is unavailable, a **DB Polling Worker** periodically checks for pending emails that are due.
+
+### Persistence on Restart
+All scheduled emails are stored in a **SQLite** database via **Prisma**. Upon server restart, the `pollWorker` or an initialization script can re-queue pending jobs into BullMQ to ensure no email is lost.
+
+### Rate Limiting & Concurrency
+- **Concurrency**: The BullMQ worker is configured with a concurrency of 5, meaning it can process 5 emails in parallel.
+- **Rate Limiting**: BullMQ handles rate limiting natively (`MAX_EMAILS_PER_HOUR`). The worker also adds a `MIN_DELAY_BETWEEN_EMAILS` (2 seconds) to avoid overhead.
+
+---
+
+## ✨ Features Implemented
+
+### Backend
+- ✅ **Scheduler**: Precise scheduling using BullMQ or DB polling fallback.
+- ✅ **Persistence**: Reliable data storage with SQLite/Prisma.
+- ✅ **Rate Limiting**: Configurable hourly limits and inter-email delays.
+- ✅ **Concurrency**: Efficient parallel job processing.
+
+### Frontend
+- ✅ **Login**: Google OAuth integration and fallback credentials.
+- ✅ **Dashboard**: Clean view of "Scheduled" vs "Sent" status.
+- ✅ **Compose**: Form for scheduling emails with immediate feedback.
+- ✅ **Tables**: Reusable, formatted data displays.
+
+---
+
+## 📦 Submission Guidelines
+1. **GitHub Repository**: The code is hosted on a private repository.
+2. **Access**: Access has been granted to user `Mitrajit`.
+
+---
+
+## 📝 Assumptions & Trade-offs
+- **SQLite**: Chosen for its zero-config setup for the initial demo. For large scale, PostgreSQL is recommended.
+- **Redis Fallback**: Implemented a DB polling fallback to ensure the app works even if the user doesn't have Redis installed locally.
+- **Security**: `.env` is ignored by Git to protect SMTP credentials.
