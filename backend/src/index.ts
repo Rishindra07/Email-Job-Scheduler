@@ -7,6 +7,7 @@ import { initializeEmailQueue } from './jobs/emailQueue';
 import { initializeEmailWorker } from './jobs/emailWorker';
 import { startPollingPendingEmails } from './jobs/pollWorker';
 import apiRoutes from './routes/api';
+import path from 'path';
 
 // Load env vars
 dotenv.config();
@@ -15,16 +16,28 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: false, // Disable for now to ensure frontend works when served
+}));
 app.use(cors());
 app.use(express.json());
 
+// Serve static files from frontend/dist
+const frontendPath = path.join(__dirname, '../../frontend/dist');
+app.use(express.static(frontendPath));
+
 app.use('/api', apiRoutes);
+
+// Catch-all to serve frontend index.html for client-side routing
+app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(frontendPath, 'index.html'));
+});
 
 // Basic health check
 app.get('/health', (req, res) => {
-    res.json({ 
-        status: 'ok', 
+    res.json({
+        status: 'ok',
         timestamp: new Date(),
         redis: redisAvailable ? 'connected' : 'unavailable'
     });
