@@ -1,0 +1,41 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  password  String?
+  googleId  String?  @unique
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  scheduledEmails ScheduledEmail[]
+}
+
+model ScheduledEmail {
+  id            String   @id @default(uuid())
+  senderId      String
+  sender        User     @relation(fields: [senderId], references: [id])
+  
+  recipient     String
+  subject       String
+  body          String
+  
+  scheduledAt   DateTime
+  sentAt        DateTime?
+  
+  status        String @default("PENDING")
+  
+  jobId         String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
